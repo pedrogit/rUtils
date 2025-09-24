@@ -96,15 +96,7 @@ myPlot <- function(spatobj, names = NULL) {
       # Add spatObj as overlay
       m <- addRasterImage(m, sObj, colors = pal, opacity = 0.7, group = layer_name, layerId = layer_name)
       m <- addLegend(m, pal = pal, values = values(sObj), title = layer_name, group = layer_name)
-      m <- addImageQuery(
-        m,
-        sObj,
-        band = 1,
-        group = layer_name,
-        project = TRUE,
-        type = c("mousemove", "click"),
-        position = "topright",
-        prefix = "Layer"
+      m <- addImageQuery(m, sObj, band = 1, group = layer_name, project = TRUE, type = c("mousemove", "click"), position = "topright", prefix = "Layer"
       )  
     }
     else if ("SpatVector" %in% class(sObj)){
