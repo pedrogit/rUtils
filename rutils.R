@@ -74,7 +74,7 @@ myPlot <- function(spatobj, names = NULL) {
       rastSize <- ncell(sObj) * bytePerPixel
       while (rastSize > 4194304){
         message("Downscaling ", names(sObj)[1], " by a factor of 2 so leaflet can handle it...")
-        sObj <- aggregate(sObj, fact = 2, fun = aggMethod)
+        sObj <- aggregate(sObj, fact = 2, fun = aggMethod, na.rm=TRUE)
         rastSize <- ncell(sObj) * bytePerPixel
       }
 
