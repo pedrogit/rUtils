@@ -80,7 +80,8 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
       ctab <- coltab(sObj)[[1]]
       aggMethod <- terra::mean
       bytePerPixel <- 8
-      if (is.factor(sObj)){
+      # if it's a raster of integer change the aggregate method to modal
+      if (is.factor(sObj) || length(unique(all(floor(sObj) == sObj))) == 1){
         aggMethod <- terra::modal
         bytePerPixel <- 4
       }
