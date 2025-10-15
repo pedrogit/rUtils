@@ -100,14 +100,21 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
       if (length(vals) > 20){
         pal <- c("#FFFFFF", getRandomPalette(hex = TRUE, dark = TRUE))
         pal <- colorNumeric(palette = pal, domain = ctab$vals, na.color = "transparent")
+        # Add spatObj as overlay
+        m <- addRasterImage(m, sObj, colors = pal, opacity = 0.7, group = layer_name, layerId = layer_name)
+        m <- addLegend(m, pal = pal, values = values(sObj), title = layer_name, group = layer_name)
       }
       else {
-        pal <- colorFactor(palette = rgb(ctab$red, ctab$green, ctab$blue, maxColorValue = 255), domain = ctab$vals, na.color = "transparent")
+        # Add spatObj as overlay
+        colors <- rgb(ctab$red, ctab$green, ctab$blue, maxColorValue = 255)
+        labels <- ctab$vals
+        if (is.factor(sObj)){
+          labels <- levels(sObj)[[1]][[2]]
+        }
+        m <- addRasterImage(m, sObj, colors = colors, opacity = 0.7, group = layer_name, layerId = layer_name)
+        m <- addLegend(m, colors = colors, values = values(sObj), labels = labels, title = layer_name, group = layer_name)
       }
       
-      # Add spatObj as overlay
-      m <- addRasterImage(m, sObj, colors = pal, opacity = 0.7, group = layer_name, layerId = layer_name)
-      m <- addLegend(m, pal = pal, values = values(sObj), title = layer_name, group = layer_name)
       m <- addImageQuery(m, sObj, band = 1, group = layer_name, project = TRUE, type = c("mousemove", "click"), position = "topright", prefix = "Layer"
       )  
     }
