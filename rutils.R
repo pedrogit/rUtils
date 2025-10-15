@@ -38,7 +38,7 @@ getRandomPalette <- function(nbcol = 1, hex = FALSE, dark = FALSE, pale = FALSE)
 ###################################################################
 # myPlot
 ###################################################################
-myPlot <- function(spatobj, names = NULL) {
+myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
   if (!is.list(spatobj)){
     spatobj <- list(spatobj)
   }
@@ -57,6 +57,7 @@ myPlot <- function(spatobj, names = NULL) {
                         overlayGroups = overlay_groups,
                         options = layersControlOptions(collapsed = FALSE))
   # Loop over spatObj
+  spatVectorIdx <- 0
   for (i in seq_along(spatobj)) {
     sObj <- spatobj[[i]]
     # Set layer name
@@ -100,8 +101,52 @@ myPlot <- function(spatobj, names = NULL) {
       )  
     }
     else if ("SpatVector" %in% class(sObj)){
+      spatVectorIdx <- spatVectorIdx + 1
       sObj <- project(sObj, "EPSG:4326")
-      m <- addGeoJSON(m, sf_geojson(st_as_sf(sObj)), color = rgb(sample(0:255, 1), sample(0:255, 1), sample(0:255, 1), maxColorValue = 255), weight = 2, fill = FALSE, group = layer_name)
+      m <- addGeoJSON(
+        m, 
+        sf_geojson(st_as_sf(sObj)),
+        color = rgb(sample(0:255, 1),
+                    sample(0:255, 1),
+                    sample(0:255, 1),
+                    maxColorValue = 255), 
+        weight = 2, 
+        fill = FALSE, 
+        group = layer_name
+      )
+      
+      # add labels if requested
+      if (!is.null(labelCols[spatVectorIdx]) && labelCols[spatVectorIdx] %in% namesV(sObj)){
+        # we will put each label on the centroid of each polygon
+        labelPts <- st_centroid(sf::st_as_sf(sObj))
+        # we create a temp column to be used as labels
+        labelPts$temp_name <- labelPts[[labelCols[spatVectorIdx]]]
+        m <- addLabelOnlyMarkers(
+          m,
+          data = labelPts,
+          #label = ~ .[[labelCols[spatVectorIdx]]], # doesn't work
+          label = ~temp_name,
+          labelOptions = labelOptions(
+            noHide = TRUE, 
+            direction = "center",
+            style = list(
+              "padding" = "1px",
+              "margin" = "0px",
+              "box-shadow" = "none",
+              "border" = "none",
+              "background-color" = "transparent",
+              "font-weight" = "bold",
+              "color" = "black",
+              "text-shadow" = paste0(
+                "1px 1px 0 rgba(255,255,255,0.6), ",
+                "-1px 1px 0 rgba(255,255,255,0.6), ",
+                "1px -1px 0 rgba(255,255,255,0.6), ",
+                "-1px -1px 0 rgba(255,255,255,0.6)"
+              )
+            )
+          )
+        )
+      }
     }
   }
 
