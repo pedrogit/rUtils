@@ -56,7 +56,7 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
   m <- addLayersControl(m, 
                         overlayGroups = overlay_groups,
                         options = layersControlOptions(collapsed = FALSE))
-  # Loop over spatObj
+  # Loop over spatobj
   spatVectorIdx <- 0
   for (i in seq_along(spatobj)) {
     sObj <- spatobj[[i]]
@@ -82,7 +82,6 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
       # Convert raster values to colors
       # if the raster has no palette build a random one
       vals <- sort(unique(values(sObj))[, 1])
-      browser()
       if (is.null(ctab)){
         ctab <- data.frame(vals, getRandomPalette(length(vals)))
       }
@@ -155,6 +154,7 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
 
 ###################################################################
 # mapViewCol
+# Build a random color map before passing the raster to mapView
 ###################################################################
 mapViewCol <-  function(raster, ...) {
   ct <- coltab(raster)
@@ -182,12 +182,8 @@ mapViewCol <-  function(raster, ...) {
   
   # Plot
   mv <- mapView(raster, col.regions = cols, at = vals, ...)
-  # if (!inherits(mv, "Map")) {
-  #   class(mv) <- c("leaflet", class(mv))
-  # }
 
   return(mv)
-  # mapView(raster, col.regions = cols, at = vals, ...)
 }
 
 ###################################################################
@@ -218,7 +214,6 @@ getRandomCategoricalMap<- function(origin = c(1541912, 1072021),
   rast <- randomPolygons(ras = tempRast, numTypes = nbregion)
   
   if (!is.null(valuevect)){
-    #browser()
     valuevectCnt <- length(unique(valuevect))
     nbCol <- valuevectCnt
     if (nbregion < valuevectCnt){
