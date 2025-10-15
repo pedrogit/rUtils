@@ -43,8 +43,20 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
     spatobj <- list(spatobj)
   }
   
-  if (is.list(names)){
-    names <- unlist(names)
+  # Build the list of layer names
+  namesV <- c()
+  if (is.null(names)){
+    for (i in seq_along(spatobj)) {
+      if (is.null(names(spatobj[[i]])) || names(spatobj[[i]]) == ""){
+        namesV <- c(namesV, paste("Layer", i))
+      }
+      else {
+        namesV <- c(namesV, names(spatobj[[i]]))
+      }
+    }
+  } 
+  else if (is.list(names)){
+    namesV <- unlist(names)
   }
   
   # Create base leaflet map
@@ -52,7 +64,7 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
   m <- addTiles(m)
   
   # Add layer control
-  overlay_groups <- if (!is.null(names)) names else paste0("Layer_", seq_along(spatobj))
+  overlay_groups <- if (!is.null(namesV)) namesV else paste0("Layer_", seq_along(spatobj))
   m <- addLayersControl(m, 
                         overlayGroups = overlay_groups,
                         options = layersControlOptions(collapsed = FALSE))
@@ -61,7 +73,7 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
   for (i in seq_along(spatobj)) {
     sObj <- spatobj[[i]]
     # Set layer name
-    layer_name <- if (!is.null(names) && length(names) >= i) names[i] else paste0("Layer_", i)
+    layer_name <- if (!is.null(namesV) && length(namesV) >= i) namesV[i] else paste0("Layer_", i)
     
     if ("SpatRaster" %in% class(sObj)){
       # resample the raster if it is too big for leafem/leaflet to handle
