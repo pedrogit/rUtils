@@ -428,3 +428,287 @@ getRandomCohortData <- function(nbPixelGroup, pixelSize, seed = NULL){
 #     #mortality = round(runif(n_cohorts, 0, 0.5), 2)
 #   )
 # })))
+
+######################################
+# Packages management
+######################################
+installedPackages <- function(){
+  if (!requireNamespace("stringr", quietly = TRUE)) {
+    install.packages("stringr")
+  }
+  library("stringr")
+  pkgs <- installed.packages()
+  pkg_names <- pkgs[, "Package"]
+  
+  get_source <- function(pkg) {
+    desc <- tryCatch(utils::packageDescription(pkg), error = function(e) return(NULL))
+    if (is.null(desc)) return(NA)
+    
+    # Check common fields
+    if (!is.null(desc$Repository)) return(desc$Repository)
+    if (!is.null(desc$RemoteType)) return(desc$RemoteType)
+    if (!is.null(desc$biocViews)) return("Bioconductor")
+    if (!is.null(desc$RemoteUrl)) return(desc$RemoteUrl)
+    
+    return("Unknown")
+  }
+  
+  sources <- sapply(pkg_names, get_source)
+  
+  str_trunk_both_ends <- function(str, start_length=10, end_length=10){
+    ret = stringr::str_trunc(str, start_length)
+    if (nchar(str)[1] > start_length) {
+      ret = paste(ret, substring(stringr::str_trunc(str, end_length, "left"), 4), sep="")
+    }
+    return(ret)
+  }
+  
+  # Build data frame
+  df <- data.frame(
+    Package = pkg_names,
+    Version = pkgs[, "Version"],
+    LibPath = str_trunk_both_ends(pkgs[, "LibPath"], 10, 20),
+    Source = str_trunk_both_ends(sub("^https?://", "", sources), 10, 20),
+    stringsAsFactors = FALSE
+  )
+  
+  #df_ordered <- df[,order(rownames(df)), ]
+  df_ordered <- df[order(df$Package), ]
+  print(df_ordered)
+}
+
+installMyPackages <- function(){
+  pkgs <- c("mapview", "stars", "NLMR")
+  for (pkg in pkgs) {
+    message(paste("Installing and loading", pkg, "..."))
+    install.packages(pkg, 
+                     dependencies=TRUE, 
+                     repos=c("https://predictiveecology.r-universe.dev", getOption("repos")))
+    library(pkg, character.only = TRUE)
+  }
+  # remotes::install_github("cran/RandomFieldsUtils")
+  # remotes::install_github("cran/RandomFields")
+  remotes::install_github("ropensci/NLMR", dependencies = TRUE, upgrade = "never",force = TRUE)
+}
+
+uninstallAllPackages <- function (){
+  pkgs <- installed.packages()
+  pkgs
+  user_pkgs <- pkgs[!pkgs[, "Priority"] %in% c("base", "recommended"), "Package"]
+  
+  # Confirm before running the next line
+  remove.packages(user_pkgs)
+}
+
+clearRam <- function(){
+  rm(list=ls())
+}
+
+clearRAM <- function(){
+  clearRam()
+}
+
+unloadAllPackages <- function() {
+  base_pkgs <- c(
+    "base", "compiler", "datasets", "graphics", "grDevices",
+    "grid", "methods", "parallel", "splines", "stats",
+    "stats4", "tools", "utils"
+  )
+  
+  loaded <- loadedNamespaces()
+  user_pkgs <- setdiff(loaded, base_pkgs)
+  
+  for (pkg in user_pkgs) {
+    message(pkg)
+    try({
+      # Detach from search path if attached
+      if (paste0("package:", pkg) %in% search()) {
+        message("Detaching...")
+        detach(paste0("package:", pkg), unload = TRUE, character.only = TRUE)
+      }
+      # Unload namespace
+      message(paste("Unloading..."))
+      
+      unloadNamespace(pkg)
+    }, silent = FALSE)
+  }
+  
+  invisible(NULL)
+}
+
+###################################################
+# Apply a function to every file in a folder tree
+###################################################
+library(purrr)
+# Apply a function to every file in a folder tree
+apply_to_files <- function(source_dir, regex = NULL, recursive = TRUE, fn, ...) {
+  files <- list.files(
+    path = source_dir,
+    pattern = regex,
+    recursive = recursive,
+    full.names = TRUE
+  )
+  
+  walk(files, fn, source_dir = source_dir, ...)
+}
+
+# Apply a function to every file in a folder tree in parallel
+library(future.apply)
+apply_to_files_p <- function(source_dir, regex = NULL, recursive = TRUE, fn, ...) {
+  plan(multisession, workers = availableCores() - 1)  # cross-platform
+  files <- list.files(
+    path = source_dir,
+    pattern = regex,
+    recursive = recursive,
+    full.names = TRUE
+  )
+  
+  future_lapply(files, future.seed=NULL, FUN = fn, source_dir = source_dir, ...)
+}
+
+# get a new file name appended with "_X" if the file already exist
+get_unique_filename <- function(path) {
+  dir  <- dirname(path)
+  name <- tools::file_path_sans_ext(basename(path))
+  ext  <- tools::file_ext(path)
+  
+  # Build full file name
+  new_path <- path
+  counter <- 1
+  
+  while (file.exists(new_path)) {
+    suffix <- paste0("_", counter)
+    new_file <- paste0(name, suffix)
+    
+    if (nzchar(ext)) {
+      new_path <- file.path(dir, paste0(new_file, ".", ext))
+    } else {
+      new_path <- file.path(dir, new_file)
+    }
+    
+    counter <- counter + 1
+  }
+  
+  new_path
+}
+
+# get a new file path in target_dir respecting the sub path of the source
+new_file_path <- function(full_filepath, source_dir, target_dir = NULL, file_suffix = "", ext = NULL){
+  if (is.null(target_dir)){
+    target_dir <- source_dir
+  }
+  if (is.null(ext)){
+    ext <- tools::file_ext(full_filepath)
+  }
+  if (!startsWith(ext, ".")){
+    ext <- paste0(".", ext)
+  }
+  sub_dir <- dirname(sub(paste0("^", source_dir), "", full_filepath))
+  filename <- tools::file_path_sans_ext(basename(full_filepath))
+  filename <- paste0(filename, file_suffix, ext)
+  newpath <- file.path(target_dir, sub_dir, filename)
+  return(get_unique_filename(newpath))
+}
+# test
+# undebug(new_file_path)
+# new_file_path("c:/temp/sub/a.txt", "c:/temp")
+# new_file_path("c:/temp/sub/a.txt", "c:/temp", "c:/temp2/")
+
+# 
+# testfnc <- function(found_file, source_dir, target_dir = NULL, file_suffix = NULL, ext = NULL) {
+#   new_full_path <- new_file_path(found_file, source_dir, target_dir, file_suffix, ext)
+#   # create the target dir if it does not exist
+#   dir_name <- dirname(new_full_path)
+#   if (!dir.exists(dir_name)) {
+#     dir.create(dir_name, recursive = TRUE, showWarnings = FALSE)
+#   }
+#   
+#   file.create(new_full_path)
+# }
+# test testfnc
+# undebug(testfnc)
+# testfnc("c:/temp/a/a1.txt", "c:/temp")
+# testfnc("c:/temp/a/a1.txt", "c:/temp", "c:/temp2")
+
+# test apply_to_files
+# undebug(apply_to_files)
+# apply_to_files(source_dir = "c:/temp", regex = "^[ab]1.*", fn = testfnc, target_dir = "c:/temp2", file_suffix = "_next")
+
+# apply_to_files(source_dir = "G:/Home/FromMaria", regex = "^pixelGroupMap.*", fn = testfnc, target_dir = "G:/Home/FromMariaOutput", file_suffix = "_next", ext="tif")
+
+parallel_chunks <- function(data, FUN, workers = NULL, nchunks = NULL, ...) {
+  browser()
+  # Detect workers if not specified
+  if (is.null(workers)) {
+    workers <- availableCores()
+  }
+  plan(multisession, workers = workers)
+  
+  n <- if (is.matrix(data) || is.data.frame(data)) {
+    nrow(data)
+  } else {
+    length(data)
+  }
+  
+  # Decide number of chunks (default = #workers)
+  if (is.null(nchunks)) nchunks <- workers
+  
+  # Create index chunks (lightweight!)
+  idx_chunks <- split(seq_len(n), cut(seq_len(n), nchunks, labels = FALSE))
+  
+  # Run in parallel
+  res <- future_lapply(idx_chunks, function(idx, data=data) {
+    FUN(data[idx, , drop = FALSE], ...)
+  },
+  future.globals = FALSE)
+  
+  return(res)
+}
+######################################
+# List all the sub-object of an object with their classes
+######################################
+
+ls_with_class <- function(x, class_filter = NULL) {
+  out <- sapply(x, function(obj) paste(class(obj), collapse = ", "))
+  
+  if (!is.null(class_filter)) {
+    class_filter <- tolower(class_filter)
+    
+    keep <- vapply(x, function(obj) {
+      any(tolower(class(obj)) %in% class_filter)
+    }, logical(1))
+    
+    out <- out[keep]
+  }
+  
+  cat(paste0(names(out), " (", out, ")"), sep = "\n")
+}
+
+######################################
+# SpaDES management
+######################################
+resetSpades <- function (){
+  #rm(list = ls())
+  #unloadAllPackages()
+  uninstallAllPackages()
+  install.packages(c("SpaDES", "reproducible", "LandR", "SpaDES.project"), 
+                   repos=c("predictiveecology.r-universe.dev", getOption("repos")), 
+                   dependencies=TRUE)
+  library(SpaDES)
+  library(SpaDES.core)
+  library(SpaDES.project)
+  library(LandR)
+  #  library(reproducible)
+}
+
+setBasePath <- function(basePath){
+  setPaths(modulePath = file.path(basePath, "modules"),
+           cachePath = file.path(basePath, "cache"),
+           inputPath = file.path(basePath, "input"),
+           outputPath = file.path(basePath, "output"),
+           rasterPath = file.path(basePath, "raster"),
+           scratchPath = file.path(basePath, "scratch"),
+           terraPath = file.path(basePath, "terra"))
+}
+
+
