@@ -218,7 +218,8 @@ mapViewCol <-  function(raster, ...) {
 # getRandomPixelGroupMap
 ###################################################################
 getRandomCategoricalMap<- function(origin = c(1541912, 1072021),
-                       width = 1000,
+                       ncol = 1000,
+                       nrow = 1000,
                        pixelsize = 250,
                        crs = "ESRI:102002",
                        nbregion = 200,
@@ -229,12 +230,12 @@ getRandomCategoricalMap<- function(origin = c(1541912, 1072021),
   }
   tempRast <- terra::rast(
     crs = crs,
-    nrows = width, 
-    ncols = width, 
+    ncols = ncol, 
+    nrows = nrow, 
     xmin = origin[1], 
-    xmax = origin[1] + width * pixelsize, 
+    xmax = origin[1] + ncol * pixelsize, 
     ymin = origin[2], 
-    ymax = origin[2] + width * pixelsize,
+    ymax = origin[2] + nrow * pixelsize,
     vals = 0
   )
   # mapView(tempRast)
