@@ -85,7 +85,7 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
       aggMethod <- terra::mean
       bytePerPixel <- 8
       # if it's a raster of integer change the aggregate method to modal
-      if (is.factor(sObj) || length(unique(all(floor(sObj) == sObj))) == 1){
+      if (is.factor(sObj) || length(unique(values(all(floor(sObj) == sObj), na.rm = TRUE))) == 1){
         aggMethod <- terra::modal
         bytePerPixel <- 4
       }
@@ -99,6 +99,10 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
       # Convert raster values to colors
       # if the raster has no palette build a random one
       vals <- sort(unique(values(sObj))[, 1])
+      if (is.factor(sObj)){
+        vals <- levels(sObj)[[1]][[2]]
+      }
+      
       if (is.null(ctab)){
         ctab <- data.frame(vals, getRandomPalette(length(vals)))
       }
@@ -113,9 +117,9 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
         # Add spatObj as overlay
         colors <- rgb(ctab$red, ctab$green, ctab$blue, maxColorValue = 255)
         labels <- ctab$vals
-        if (is.factor(sObj)){
-          labels <- levels(sObj)[[1]][[2]]
-        }
+        # if (is.factor(sObj)){
+        #   labels <- levels(sObj)[[1]][[2]]
+        # }
         m <- addRasterImage(m, sObj, colors = colors, opacity = 0.7, group = layer_name, layerId = layer_name)
         m <- addLegend(m, colors = colors, values = values(sObj), labels = labels, title = layer_name, group = layer_name)
       }
