@@ -1,6 +1,6 @@
+library(SpaDES)
 library(terra)
 library(RColorBrewer)
-library(SpaDES.tools)
 library(mapview)
 library(leaflet)
 library(leafem)
