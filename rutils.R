@@ -47,7 +47,11 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
   namesV <- c()
   if (is.null(names)){
     for (i in seq_along(spatobj)) {
-      if ("SpatVector" %in% class(spatobj[[i]]) || is.null(names(spatobj[[i]])) || names(spatobj[[i]]) == ""){
+      if ("SpatVector" %in% class(spatobj[[i]]) || 
+          is.null(names(spatobj[[i]])) || 
+          all(names(spatobj[[i]]) == "") || 
+          length(names(spatobj[[i]])) > 1
+         ){
         namesV <- c(namesV, paste("Layer", i))
       }
       else {
