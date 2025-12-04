@@ -38,9 +38,14 @@ getRandomPalette <- function(nbcol = 1, hex = FALSE, dark = FALSE, pale = FALSE)
 ###################################################################
 # myPlot
 ###################################################################
-myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
+myPlot <- function(spatobj, names = NULL, labelCols = NULL, sat = FALSE) {
   if (!is.list(spatobj)){
     spatobj <- list(spatobj)
+  }
+  
+  make_name_unique <- function(x) {
+    n <- ave(seq_along(x), x, FUN = seq_along)
+    ifelse(n == 1, x, paste0(x, " ", n))
   }
   
   # Build the list of layer names
@@ -62,15 +67,22 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
   else if (is.list(names)){
     namesV <- unlist(names)
   }
+  namesV <- make_name_unique(namesV)
   
   # Create base leaflet map
   m <- leaflet()
-  m <- addTiles(m)
+  if (sat){
+    m <- addProviderTiles(m, providers$Esri.WorldImagery, group = "Base Map")
+  # m <- addProviderTiles(m, providers$AzureMaps.MicrosoftImagery, group = "Base Map")
+  }
+  else{
+    m <- addTiles(m, group = "Base Map")
+  }
   
   # Add layer control
   overlay_groups <- if (!is.null(namesV)) namesV else paste0("Layer_", seq_along(spatobj))
-  m <- addLayersControl(m, 
-                        overlayGroups = overlay_groups,
+  m <- addLayersControl(m,
+                        overlayGroups = c("Base Map", overlay_groups),
                         options = layersControlOptions(collapsed = FALSE))
   # Loop over spatobj
   spatVectorIdx <- 0
@@ -85,8 +97,10 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
       aggMethod <- terra::mean
       bytePerPixel <- 8
       # if it's a raster of integer change the aggregate method to modal
+      projMethod = "bilinear"
       if (is.factor(sObj) || length(unique(values(all(floor(sObj) == sObj), na.rm = TRUE))) == 1){
         aggMethod <- terra::modal
+        projMethod = "mode"
         bytePerPixel <- 4
       }
       rastSize <- ncell(sObj) * bytePerPixel
@@ -95,7 +109,8 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
         sObj <- aggregate(sObj, fact = 2, fun = aggMethod, na.rm=TRUE)
         rastSize <- ncell(sObj) * bytePerPixel
       }
-
+      sObj <- project(sObj, "EPSG:4326", method = projMethod)
+      
       # Convert raster values to colors
       # if the raster has no palette build a random one
       vals <- sort(unique(values(sObj))[, 1])
@@ -104,7 +119,7 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
       }
       
       if (is.null(ctab)){
-        ctab <- data.frame(vals, getRandomPalette(length(vals)))
+        ctab <- data.frame(values = vals, getRandomPalette(length(vals)))
       }
       if (length(vals) > 20){
         pal <- c("#FFFFFF", getRandomPalette(hex = TRUE, dark = TRUE))
@@ -116,7 +131,7 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
       else {
         # Add spatObj as overlay
         colors <- rgb(ctab$red, ctab$green, ctab$blue, maxColorValue = 255)
-        labels <- ctab$vals
+        labels <- ctab$values
         # if (is.factor(sObj)){
         #   labels <- levels(sObj)[[1]][[2]]
         # }
@@ -124,8 +139,7 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL) {
         m <- addLegend(m, colors = colors, values = values(sObj), labels = labels, title = layer_name, group = layer_name)
       }
       
-      m <- addImageQuery(m, sObj, band = 1, group = layer_name, project = TRUE, type = c("mousemove", "click"), position = "topright", prefix = "Layer"
-      )  
+      m <- addImageQuery(m, sObj, layerId = layer_name, band = 1, group = layer_name, project = TRUE, type = c("mousemove", "click"), position = "topright", prefix = "Layer")  
     }
     else if ("SpatVector" %in% class(sObj)){
       spatVectorIdx <- spatVectorIdx + 1
