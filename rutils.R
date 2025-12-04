@@ -231,17 +231,36 @@ mapViewCol <-  function(raster, ...) {
 ###################################################################
 # getRandomPixelGroupMap
 ###################################################################
-getRandomCategoricalMap<- function(origin = c(1541912, 1072021),
-                       ncol = 1000,
-                       nrow = 1000,
-                       pixelsize = 250,
-                       crs = "ESRI:102002",
-                       nbregion = 200,
-                       valuevect = NULL,
-                       seed = NULL){
+getRandomCategoricalMap<- function(
+    origin = c(1541912, 1072021),
+    ncol = 1000,
+    nrow = 1000,
+    pixelsize = 250,
+    crs = "ESRI:102002",
+    nbregion = 200,
+    valuevect = NULL,
+    naprob = 0,
+    seed = NULL
+){
+  assertthat::assert_that(is.numeric(ncol), ncol >= 0) 
+  ncol <- ceiling(ncol)
+  
+  assertthat::assert_that(is.numeric(nrow), nrow >= 0) 
+  nrow <- ceiling(nrow)
+  
+  assertthat::assert_that(is.numeric(pixelsize), pixelsize >= 0) 
+  pixelsize <- ceiling(pixelsize)
+  
+  assertthat::assert_that(is.numeric(nbregion), nbregion >= 0) 
+  nbregion <- ceiling(nbregion)
+  
+  assertthat::assert_that(is.numeric(naprob), naprob >= 0, naprob <= 1) 
+  
   if (!is.null(seed)){
     set.seed(seed)
   }
+  
+  # create the reference raster
   tempRast <- terra::rast(
     crs = crs,
     ncols = ncol, 
@@ -256,11 +275,25 @@ getRandomCategoricalMap<- function(origin = c(1541912, 1072021),
   
   rast <- randomPolygons(ras = tempRast, numTypes = nbregion)
   
+  if (naprob > 0){
+    uvals <- unique(values(rast))
+    vals_to_na <- uvals[runif(length(uvals)) < naprob]
+    rast[values(rast) %in% vals_to_na] <- NA
+    
+    # reclass the raster so that values are consecutive
+    old_vals <- sort(unique(values(rast)))
+    reclass_table <- cbind(old_vals, seq_along(old_vals))
+    rast <- classify(rast, rcl=reclass_table)
+    nbregion <- length(unique(values(rast)))
+  }
+# browser()  
   if (!is.null(valuevect)){
     valuevectCnt <- length(unique(valuevect))
     nbCol <- valuevectCnt
     if (nbregion < valuevectCnt){
-      message("getRandomPixelGroupMap: Not enough different polygons to assign every values in valueVect")
+      message("getRandomPixelGroupMap: Not enough different polygons",
+              ifelse(naprob > 0, paste0(" remaining (", naprob * 100,"% were set to NA)"), ""),
+              " to assign every values in valueVect")
     }
     else {
       breaks <- seq(0, nbregion, length.out = valuevectCnt + 1)
@@ -281,6 +314,15 @@ getRandomCategoricalMap<- function(origin = c(1541912, 1072021),
   
   return(rast)
 }
+# getRandomCategoricalMap(ncol = "a")
+# getRandomCategoricalMap(ncol = -1)
+# getRandomCategoricalMap(ncol = c(1,2))
+# getRandomCategoricalMap(ncol = 200)
+# getRandomCategoricalMap(naprob = -0.0001)
+# getRandomCategoricalMap(naprob = 0.0001)
+# 
+# x <- getRandomCategoricalMap(seed = 100, naprob = 0.5)
+# x <- getRandomCategoricalMap(seed = 100, naprob = 0.5, valuevect = c(100:200))
 ###################################################################
 # getRandomCohortData
 #  Return a randomly generated cohortdata table
