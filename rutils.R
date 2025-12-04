@@ -94,6 +94,9 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL, sat = FALSE) {
     if ("SpatRaster" %in% class(sObj)){
       # resample the raster if it is too big for leafem/leaflet to handle
       ctab <- coltab(sObj)[[1]]
+      if (!is.null(ctab)){
+        names(ctab)[names(ctab) == "vals"] <- "values"
+      }
       aggMethod <- terra::mean
       bytePerPixel <- 8
       # if it's a raster of integer change the aggregate method to modal
@@ -283,7 +286,7 @@ getRandomCategoricalMap<- function(
     # reclass the raster so that values are consecutive
     old_vals <- sort(unique(values(rast)))
     reclass_table <- cbind(old_vals, seq_along(old_vals))
-    rast <- classify(rast, rcl=reclass_table)
+    rast <- classify(rast, rcl = reclass_table)
     nbregion <- length(unique(values(rast)))
   }
 # browser()  
