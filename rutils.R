@@ -530,7 +530,10 @@ installedPackages <- function(){
   
   #df_ordered <- df[,order(rownames(df)), ]
   df_ordered <- df[order(df$Package), ]
+  old_max_print <- getOption("max.print")
+  options('max.print' = 2000) 
   print(df_ordered)
+  options('max.print' = old_max_print) 
 }
 
 installMyPackages <- function(){
