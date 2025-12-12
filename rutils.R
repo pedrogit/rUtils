@@ -97,10 +97,11 @@ myPlot <- function(spatobj, names = NULL, labelCols = NULL, sat = FALSE) {
       if (!is.null(ctab)){
         names(ctab)[names(ctab) == "vals"] <- "values"
       }
+      # Set some default parameters
       aggMethod <- terra::mean
       bytePerPixel <- 8
-      # if it's a raster of integer change the aggregate method to modal
       projMethod = "bilinear"
+      # If it's a raster of integer change those parameters
       if (is.factor(sObj) || length(unique(values(all(floor(sObj) == sObj), na.rm = TRUE))) == 1){
         aggMethod <- terra::modal
         projMethod = "mode"
