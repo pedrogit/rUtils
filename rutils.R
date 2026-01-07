@@ -490,6 +490,71 @@ getRandomCohortData <- function(nbPixelGroup, pixelSize, seed = NULL){
 # })))
 
 ######################################
+# Get current script dir
+######################################
+get_script_dir <- function() {
+  if (requireNamespace("rstudioapi", quietly = TRUE) &&
+      rstudioapi::isAvailable()) {
+    path <- rstudioapi::getActiveDocumentContext()$path
+    if (nzchar(path)) return(dirname(path))
+  }
+  if (!is.null(sys.frames()[[1]]$ofile)) {
+    return(dirname(normalizePath(sys.frames()[[1]]$ofile)))
+  }
+  stop("Cannot determine script directory")
+}
+
+######################################
+# Frequency table from data frame, data table or spatRaster
+######################################
+freq_table <- function(x, col = NULL) {
+  
+  # -----------------------
+  # If x is a SpatRaster
+  # -----------------------
+  if (inherits(x, "SpatRaster")) {
+    df <- as.data.frame(freq(x))
+    
+    # If factor raster, merge levels
+    if (is.factor(x) && !is.null(levels(x)[[1]])) {
+      lvls <- levels(x)[[1]]
+      if ("class" %in% colnames(lvls)) {
+        df <- merge(df, lvls, by.x = "value", by.y = "ID", all.x = TRUE)
+      }
+    }
+    
+    setDT(df)
+    setnames(df, "count", "count")
+    return(df)
+  }
+  
+  # -----------------------
+  # If x is data.frame or data.table
+  # -----------------------
+  if (is.data.frame(x)) {
+    dt <- as.data.table(x)
+    
+    # If col not specified and only 1 column, pick that column automatically
+    if (is.null(col)) {
+      if (ncol(dt) == 1) {
+        col <- names(dt)
+      } else {
+        stop("For data.frame/data.table, provide 'col' argument.")
+      }
+    }
+    
+    # make sure col is character
+    if (!col %in% names(dt)) stop("Column 'col' not found in data.")
+    
+    # use .SDcols to select column
+    dt_freq <- dt[, .N, by = col]
+    setnames(dt_freq, "N", "count")
+    return(dt_freq)
+  }
+  
+  stop("Unsupported object type. Provide a data.frame, data.table, or SpatRaster.")
+}
+######################################
 # Packages management
 ######################################
 installedPackages <- function(){
@@ -700,7 +765,6 @@ new_file_path <- function(full_filepath, source_dir, target_dir = NULL, file_suf
 # apply_to_files(source_dir = "G:/Home/FromMaria", regex = "^pixelGroupMap.*", fn = testfnc, target_dir = "G:/Home/FromMariaOutput", file_suffix = "_next", ext="tif")
 
 parallel_chunks <- function(data, FUN, workers = NULL, nchunks = NULL, ...) {
-  browser()
   # Detect workers if not specified
   if (is.null(workers)) {
     workers <- availableCores()
