@@ -508,52 +508,51 @@ get_script_dir <- function() {
 # Frequency table from data frame, data table or spatRaster
 ######################################
 freq_table <- function(x, col = NULL) {
-  
   # -----------------------
-  # If x is a SpatRaster
+  # SpatRaster
   # -----------------------
   if (inherits(x, "SpatRaster")) {
-    df <- as.data.frame(freq(x))
+    df <- as.data.frame(freq(x, value=TRUE))  # get counts including NA
+    setDT(df)
     
-    # If factor raster, merge levels
+    # merge factor levels if categorical
     if (is.factor(x) && !is.null(levels(x)[[1]])) {
       lvls <- levels(x)[[1]]
       if ("class" %in% colnames(lvls)) {
         df <- merge(df, lvls, by.x = "value", by.y = "ID", all.x = TRUE)
       }
     }
-    
-    setDT(df)
-    setnames(df, "count", "count")
     return(df)
   }
   
   # -----------------------
-  # If x is data.frame or data.table
+  # data.frame / data.table
   # -----------------------
   if (is.data.frame(x)) {
     dt <- as.data.table(x)
     
-    # If col not specified and only 1 column, pick that column automatically
     if (is.null(col)) {
-      if (ncol(dt) == 1) {
-        col <- names(dt)
-      } else {
-        stop("For data.frame/data.table, provide 'col' argument.")
-      }
+      if (ncol(dt) == 1) col <- names(dt)
+      else stop("For data.frame/data.table, provide 'col' argument.")
+    }
+    if (!col %in% names(dt)) stop("Column 'col' not found.")
+    
+    # count including NA
+    dt_freq <- dt[, .N, by = col]
+    
+    # ensure NA row exists if needed
+    if (any(is.na(dt[[col]])) && !any(is.na(dt_freq[[col]]))) {
+      na_count <- dt[is.na(get(col)), .N]
+      dt_freq <- rbind(dt_freq, data.table(setNames(list(NA, na_count), c(col, "N"))))
     }
     
-    # make sure col is character
-    if (!col %in% names(dt)) stop("Column 'col' not found in data.")
-    
-    # use .SDcols to select column
-    dt_freq <- dt[, .N, by = col]
     setnames(dt_freq, "N", "count")
     return(dt_freq)
   }
   
-  stop("Unsupported object type. Provide a data.frame, data.table, or SpatRaster.")
+  stop("Unsupported object type. Must be data.frame, data.table, or SpatRaster.")
 }
+
 ######################################
 # Packages management
 ######################################
