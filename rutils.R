@@ -512,16 +512,18 @@ freq_table <- function(x, col = NULL) {
   # SpatRaster
   # -----------------------
   if (inherits(x, "SpatRaster")) {
-    df <- as.data.frame(freq(x, value=TRUE))  # get counts including NA
+    df1 <- as.data.frame(freq(x, value=NA))  # get counts of NA
+    df2 <- as.data.frame(freq(x))  # get counts not including NA
+    df <- rbind(df1, df2)
     setDT(df)
     
     # merge factor levels if categorical
-    if (is.factor(x) && !is.null(levels(x)[[1]])) {
-      lvls <- levels(x)[[1]]
-      if ("class" %in% colnames(lvls)) {
-        df <- merge(df, lvls, by.x = "value", by.y = "ID", all.x = TRUE)
-      }
-    }
+    # if (is.factor(x) && !is.null(levels(x)[[1]])) {
+    #   lvls <- levels(x)[[1]]
+    #   if ("class" %in% colnames(lvls)) {
+    #     df <- merge(df, lvls, by.x = "value", by.y = "ID", all.x = TRUE)
+    #   }
+    # }
     return(df)
   }
   
