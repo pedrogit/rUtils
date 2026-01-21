@@ -507,31 +507,33 @@ get_script_dir <- function() {
 ######################################
 # Frequency table from data frame, data table or spatRaster
 ######################################
-freq_table <- function(x, col = NULL) {
+freq_table <- function(x, col = NULL, pct = FALSE) {
+  validType = FALSE
   # -----------------------
   # SpatRaster
   # -----------------------
   if (inherits(x, "SpatRaster")) {
-    df1 <- as.data.frame(freq(x, value=NA))  # get counts of NA
-    df2 <- as.data.frame(freq(x))  # get counts not including NA
-    df <- rbind(df1, df2)
-    setDT(df)
-    
+    validType = TRUE
+    dt1 <- as.data.frame(terra::freq(x, value=NA))  # get counts of NA
+    dt2 <- as.data.frame(terra::freq(x))  # get counts not including NA
+    dt_freq <- rbind(dt1, dt2)
+    data.table::setDT(dt_freq)
+
     # merge factor levels if categorical
     # if (is.factor(x) && !is.null(levels(x)[[1]])) {
     #   lvls <- levels(x)[[1]]
     #   if ("class" %in% colnames(lvls)) {
-    #     df <- merge(df, lvls, by.x = "value", by.y = "ID", all.x = TRUE)
+    #     dt_freq <- merge(dt_freq, lvls, by.x = "value", by.y = "ID", all.x = TRUE)
     #   }
     # }
-    return(df)
   }
   
   # -----------------------
   # data.frame / data.table
   # -----------------------
   if (is.data.frame(x)) {
-    dt <- as.data.table(x)
+    validType = TRUE
+    dt <- data.table::as.data.table(x)
     
     if (is.null(col)) {
       if (ncol(dt) == 1) col <- names(dt)
@@ -549,6 +551,11 @@ freq_table <- function(x, col = NULL) {
     }
     
     setnames(dt_freq, "N", "count")
+  }
+  if (validType){
+    if (pct) {
+      dt_freq$pct <-  round(100 * (dt_freq$count / sum(dt_freq$count)), 2)
+    }
     return(dt_freq)
   }
   
