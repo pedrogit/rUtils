@@ -8,6 +8,39 @@ library(geojsonsf)
 library(sf)
 
 ###################################################################
+# display_ring_and_holes
+###################################################################
+total_exterior_rings <- function(sf_obj) {
+  x <- sf::st_as_sf(sf_obj)
+  sum(sapply(st_geometry(x), function(g) {
+    if (inherits(g, "POLYGON")) {
+      1
+    } else if (inherits(g, "MULTIPOLYGON")) {
+      length(g)  # one exterior ring per polygon part
+    } else {
+      0
+    }
+  }))
+}
+
+total_holes <- function(sf_obj) {
+  x <- sf::st_as_sf(sf_obj)
+  sum(sapply(st_geometry(x), function(g) {
+    if (inherits(g, "POLYGON")) {
+      max(0, length(g) - 1)  # interior rings
+    } else if (inherits(g, "MULTIPOLYGON")) {
+      sum(sapply(g, function(poly) max(0, length(poly) - 1)))
+    } else {
+      0
+    }
+  }))
+}
+
+display_ring_and_holes <- function(x, fct = ""){
+  message(fct, "() with ", nrow(x), " (multi)polygons, ", total_exterior_rings(x), " exterior rings, ", total_holes(x), " holes...")
+}
+
+###################################################################
 # getRandomPalette
 ###################################################################
 getRandomPalette <- function(nbcol = 1, hex = FALSE, dark = FALSE, pale = FALSE){
