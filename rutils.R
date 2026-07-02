@@ -1,4 +1,4 @@
-library(SpaDES)
+#library(SpaDES)
 library(terra)
 library(RColorBrewer)
 library(mapview)
@@ -862,7 +862,7 @@ resetSpades <- function (){
   install.packages(c("SpaDES", "reproducible", "LandR", "SpaDES.project"), 
                    repos=c("predictiveecology.r-universe.dev", getOption("repos")), 
                    dependencies=TRUE)
-  library(SpaDES)
+  #library(SpaDES)
   library(SpaDES.core)
   library(SpaDES.project)
   library(LandR)
